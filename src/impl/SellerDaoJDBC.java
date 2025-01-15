@@ -1,6 +1,5 @@
 package impl;
 
-import db.DB;
 import db.DbException;
 import entities.Department;
 import entities.Seller;
@@ -15,7 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class SellerDaoJDBC implements SellerDao {//classe que vai realizar as query do BD
+public class SellerDaoJDBC implements SellerDao {
     private Connection conn;
 
     public SellerDaoJDBC(Connection conn) {
@@ -33,7 +32,7 @@ public class SellerDaoJDBC implements SellerDao {//classe que vai realizar as qu
     }
 
     @Override
-    public void delete(Integer id) {
+    public void deleteById(Integer id) {
 
     }
 
@@ -47,22 +46,38 @@ public class SellerDaoJDBC implements SellerDao {//classe que vai realizar as qu
                     "on seller.DepartmentId = department.Id " +
                     "where seller.Id = ?");
             st.setInt(1,id);
+
             rs = st.executeQuery();
             if(rs.next()) {
-                Department dep = instantiateDepartment(rs);
-                Seller obj = instantiateSeller(rs,dep);
-                return obj;
+
+
             }
             return null;
         }
         catch (SQLException e) {
             throw new DbException(e.getMessage());
         }
-        finally {
-            DB.closeResultSet(rs);
-            DB.closeStatement(st);
-        }
     }
+
+    public Department instantiateDepartment(ResultSet rs) throws SQLException {
+        Department dep = new Department();
+        dep.setId(rs.getInt("DepartmentId"));
+        dep.setName(rs.getString("DepName"));
+        return dep;
+    }
+
+    public Seller instantiateSeller(ResultSet rs, Department dep) throws SQLException{
+        Seller obj = new Seller();
+        obj.setId(rs.getInt("Id"));
+        obj.setName(rs.getString("Name"));
+        obj.setEmail(rs.getString("Email"));
+        obj.setBirthDate(rs.getDate("BirthDate"));
+        obj.setBaseSalary(rs.getDouble("BaseSalary"));
+        obj.setDepartment(dep);
+        return obj;
+    }
+
+
 
     @Override
     public List<Seller> findAll() {
@@ -79,13 +94,10 @@ public class SellerDaoJDBC implements SellerDao {//classe que vai realizar as qu
                     "on seller.DepartmentId = department.Id " +
                     "where DepartmentId = ? " +
                     "order by name");
-            st.setInt(1,department.getId());
-
+            st.setInt(1, department.getId());
             List<Seller> list = new ArrayList<>();
             Map<Integer,Department> map = new HashMap<>();
-
             rs = st.executeQuery();
-
             while(rs.next()) {
                 int idDepartment = rs.getInt("DepartmentId");
 
@@ -95,38 +107,14 @@ public class SellerDaoJDBC implements SellerDao {//classe que vai realizar as qu
                     dep = instantiateDepartment(rs);
                     map.put(idDepartment,dep);
                 }
+
                 Seller obj = instantiateSeller(rs,dep);
                 list.add(obj);
             }
             return list;
         }
-
         catch (SQLException e) {
             throw new DbException(e.getMessage());
         }
-        finally {
-            DB.closeResultSet(rs);
-            DB.closeStatement(st);
-        }
     }
-
-
-    private Seller instantiateSeller(ResultSet rs, Department dep) throws SQLException {
-        Seller obj = new Seller();
-        obj.setId(rs.getInt("Id"));
-        obj.setName(rs.getString("Name"));
-        obj.setEmail(rs.getString("Email"));
-        obj.setBirthDate(rs.getDate("BirthDate"));
-        obj.setBaseSalary(rs.getDouble("BaseSalary"));
-        obj.setDepartment(dep);
-        return obj;
-    }
-
-    private Department instantiateDepartment(ResultSet rs) throws SQLException {
-        Department dep = new  Department();
-        dep.setId(rs.getInt("DepartmentId"));
-        dep.setName(rs.getString("DepName"));
-        return dep;
-    }
-
 }
