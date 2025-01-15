@@ -10,7 +10,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SellerDaoJDBC implements SellerDao {//classe que vai realizar as query do BD
     private Connection conn;
@@ -61,6 +64,53 @@ public class SellerDaoJDBC implements SellerDao {//classe que vai realizar as qu
         }
     }
 
+    @Override
+    public List<Seller> findAll() {
+        return List.of();
+    }
+
+    @Override
+    public List<Seller> findByDepartment(Department department) {
+        PreparedStatement st = null;
+        ResultSet rs = null;
+
+        try {
+            st = conn.prepareStatement("select seller.*,department.Name as DepName from seller inner join department " +
+                    "on seller.DepartmentId = department.Id " +
+                    "where DepartmentId = ? " +
+                    "order by name");
+            st.setInt(1,department.getId());
+
+            List<Seller> list = new ArrayList<>();
+            Map<Integer,Department> map = new HashMap<>();
+
+            rs = st.executeQuery();
+
+            while(rs.next()) {
+                int idDepartment = rs.getInt("DepartmentId");
+
+                Department dep = map.get(idDepartment);
+
+                if(dep == null) {
+                    dep = instantiateDepartment(rs);
+                    map.put(idDepartment,dep);
+                }
+                Seller obj = instantiateSeller(rs,dep);
+                list.add(obj);
+            }
+            return list;
+        }
+
+        catch (SQLException e) {
+            throw new DbException(e.getMessage());
+        }
+        finally {
+            DB.closeResultSet(rs);
+            DB.closeStatement(st);
+        }
+    }
+
+
     private Seller instantiateSeller(ResultSet rs, Department dep) throws SQLException {
         Seller obj = new Seller();
         obj.setId(rs.getInt("Id"));
@@ -79,8 +129,4 @@ public class SellerDaoJDBC implements SellerDao {//classe que vai realizar as qu
         return dep;
     }
 
-    @Override
-    public List<Seller> dep() {
-        return List.of();
-    }
 }
