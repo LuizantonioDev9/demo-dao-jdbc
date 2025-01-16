@@ -2,9 +2,11 @@ package application;
 
 import entities.Department;
 import entities.Seller;
+import impl.SellerDaoJDBC;
 import model.dao.DaoFactory;
 import model.dao.SellerDao;
 
+import java.util.Date;
 import java.util.List;
 
 public class Program {
@@ -29,5 +31,11 @@ public class Program {
         for(Seller obj : list) {
             System.out.println(obj);
         }
+
+        System.out.println();
+        System.out.println("=== TEST 4: seller insert ====");
+        department = new Department(1,"Cantor");
+        seller = new Seller(1,"Alexandre Pires","SPC@gmail.com",new Date(),3000.0,department);
+        sellerDao.insert(seller);
     }
 }
