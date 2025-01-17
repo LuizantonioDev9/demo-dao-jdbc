@@ -6,7 +6,6 @@ import entities.Department;
 import entities.Seller;
 import model.dao.SellerDao;
 
-import javax.naming.Name;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,11 +19,11 @@ public class SellerDaoJDBC implements SellerDao {
         this.conn = conn;
     }
 
-
     @Override
     public void insert(Seller obj) {
         PreparedStatement st = null;
         ResultSet rs = null;
+
         try {
             st = conn.prepareStatement("INSERT INTO seller " +
                     "(Name, Email, BirthDate, BaseSalary, DepartmentId) " +
@@ -32,7 +31,7 @@ public class SellerDaoJDBC implements SellerDao {
                     "(?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
             st.setString(1,obj.getName());
             st.setString(2,obj.getEmail());
-            st.setDate(3, new java.sql.Date(obj.getBirthDate().getTime()));
+            st.setDate(3,new java.sql.Date(obj.getBirthDate().getTime()));
             st.setDouble(4,obj.getBaseSalary());
             st.setInt(5,obj.getDepartment().getId());
 
@@ -40,14 +39,15 @@ public class SellerDaoJDBC implements SellerDao {
 
             if(rowsAffected > 0) {
                 rs = st.getGeneratedKeys();
-                while(rs.next()) {
+                if(rs.next()) {
                     int id = rs.getInt(1);
-                    System.out.println("Done! ID = " + id);
+                    obj.setId(id);
                 }
             }
             else {
-                throw new DbException("Unexpected error! no rows affected!");
+                throw new DbException("No rows affected");
             }
+
         }
         catch (SQLException e) {
             throw new DbException(e.getMessage());
@@ -60,11 +60,49 @@ public class SellerDaoJDBC implements SellerDao {
 
     @Override
     public void update(Seller obj) {
+        PreparedStatement st = null;
+        ResultSet rs = null;
+
+        try {
+            st = conn.prepareStatement("UPDATE seller " +
+                    "SET Name = ?, Email = ?, BirthDate = ?, BaseSalary = ?, DepartmentId = ? " +
+                    "WHERE Id = ? )", Statement.RETURN_GENERATED_KEYS);
+            st.setString(1,obj.getName());
+            st.setString(2,obj.getEmail());
+            st.setDate(3,new java.sql.Date(obj.getBirthDate().getTime()));
+            st.setDouble(4,obj.getBaseSalary());
+            st.setInt(5,obj.getDepartment().getId());
+            st.setInt(6,obj.getId());
+            int rowsAffected = st.executeUpdate();
+        }
+        catch (SQLException e) {
+            throw new DbException(e.getMessage());
+        }
+        finally {
+            DB.closeResultSet(rs);
+            DB.closeStatement(st);
+        }
 
     }
 
     @Override
     public void deleteById(Integer id) {
+        PreparedStatement st = null;
+        ResultSet rs = null;
+
+        try {
+            st = conn.prepareStatement("DELETE FROM seller\n" +
+                    "WHERE Id = ?");
+            st.setInt(1,id);
+            int rowsAffected = st.executeUpdate();
+        }
+        catch (SQLException e) {
+            throw new DbException(e.getMessage());
+        }
+        finally {
+            DB.closeResultSet(rs);
+            DB.closeStatement(st);
+        }
 
     }
 
@@ -74,44 +112,26 @@ public class SellerDaoJDBC implements SellerDao {
         ResultSet rs = null;
 
         try {
-            st = conn.prepareStatement("select seller.*,department.Name as DepName from seller inner join department " +
-                    "on seller.DepartmentId = department.Id " +
-                    "where seller.Id = ?");
+            st = conn.prepareStatement("SELECT seller.*,department.Name as DepName " +
+                    "FROM seller INNER JOIN department " +
+                    "ON seller.DepartmentId = department.Id " +
+                    "WHERE seller.Id = ?");
             st.setInt(1,id);
             rs = st.executeQuery();
             if(rs.next()) {
-                Department dep = instatiantionDepartment(rs);
-                Seller obj = instatiantionSeller(rs,dep);
+                Department dep = instatiationDepartment(rs);
+                Seller obj = instatiationSeller(rs,dep);
                 return obj;
             }
             return null;
-
         }
         catch (SQLException e) {
             throw new DbException(e.getMessage());
         }
         finally {
-            DB.closeStatement(st);
             DB.closeResultSet(rs);
+            DB.closeStatement(st);
         }
-    }
-
-    public Department instatiantionDepartment(ResultSet rs) throws SQLException {
-        Department dep = new Department();
-        dep.setId(rs.getInt("DepartmentId"));
-        dep.setName(rs.getString("DepName"));
-        return dep;
-    }
-
-    public Seller instatiantionSeller(ResultSet rs,Department dep) throws SQLException {
-        Seller obj = new Seller();
-        obj.setId(rs.getInt("Id"));
-        obj.setName(rs.getString("Name"));
-        obj.setEmail(rs.getString("Email"));
-        obj.setBirthDate(rs.getDate("BirthDate"));
-        obj.setBaseSalary(rs.getDouble("BaseSalary"));
-        obj.setDepartment(dep);
-        return obj;
     }
 
     @Override
@@ -128,14 +148,14 @@ public class SellerDaoJDBC implements SellerDao {
             Map<Integer,Department> map = new HashMap<>();
             rs = st.executeQuery();
             while(rs.next()) {
-                int idDepartment = rs.getInt("DepartmentId");
+                int idDepartment = rs.getInt("Id");
 
-                Department dep = map.get(rs.getInt("DepartmentId"));
+                Department dep = map.get(idDepartment);
                 if(dep == null) {
-                    dep = instatiantionDepartment(rs);
+                    dep = instatiationDepartment(rs);
                     map.put(idDepartment,dep);
                 }
-                Seller obj = instatiantionSeller(rs,dep);
+                Seller obj = instatiationSeller(rs,dep);
                 list.add(obj);
             }
             return list;
@@ -145,33 +165,35 @@ public class SellerDaoJDBC implements SellerDao {
             throw new DbException(e.getMessage());
         }
         finally {
-            DB.closeStatement(st);
             DB.closeResultSet(rs);
+            DB.closeStatement(st);
         }
     }
 
     @Override
-    public List<Seller> findByDepartment(Department department){
+    public List<Seller> findByDepartment(Department department) {
         PreparedStatement st = null;
         ResultSet rs = null;
 
         try {
-            st = conn.prepareStatement("select seller.*,department.Name as DepName from seller inner join department " +
-                    "on seller.DepartmentId = department.Id " +
-                    "where DepartmentId = ?");
-            st.setInt(1, department.getId());
+            st = conn.prepareStatement("SELECT seller.*,department.Name as DepName " +
+                    "FROM seller INNER JOIN department " +
+                    "ON seller.DepartmentId = department.Id " +
+                    "WHERE DepartmentId = ? " +
+                    "ORDER BY Name");
+            st.setInt(1,department.getId());
             List<Seller> list = new ArrayList<>();
             Map<Integer,Department> map = new HashMap<>();
             rs = st.executeQuery();
             while(rs.next()) {
-                int idDepartment = rs.getInt("DepartmentId");
+                int idDepartment = rs.getInt("Id");
 
-                Department dep = map.get(rs.getInt("DepartmentId"));
+                Department dep = map.get(idDepartment);
                 if(dep == null) {
-                    dep = instatiantionDepartment(rs);
+                    dep = instatiationDepartment(rs);
                     map.put(idDepartment,dep);
                 }
-                Seller obj = instatiantionSeller(rs,dep);
+                Seller obj = instatiationSeller(rs,dep);
                 list.add(obj);
             }
             return list;
@@ -181,8 +203,27 @@ public class SellerDaoJDBC implements SellerDao {
             throw new DbException(e.getMessage());
         }
         finally {
-            DB.closeStatement(st);
             DB.closeResultSet(rs);
+            DB.closeStatement(st);
         }
     }
+
+    public Department instatiationDepartment(ResultSet rs) throws SQLException {
+        Department dep = new Department();
+        dep.setId(rs.getInt("DepartmentId"));
+        dep.setName(rs.getString("DepName"));
+        return dep;
+    }
+
+    public Seller instatiationSeller(ResultSet rs, Department department) throws SQLException {
+        Seller obj = new Seller();
+        obj.setId(rs.getInt("Id"));
+        obj.setName(rs.getString("Name"));
+        obj.setEmail(rs.getString("Email"));
+        obj.setBirthDate(rs.getDate("BirthDate"));
+        obj.setBaseSalary(rs.getDouble("BaseSalary"));
+        obj.setDepartment(department);
+        return obj;
+    }
+
 }

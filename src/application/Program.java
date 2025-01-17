@@ -2,40 +2,47 @@ package application;
 
 import entities.Department;
 import entities.Seller;
-import impl.SellerDaoJDBC;
 import model.dao.DaoFactory;
 import model.dao.SellerDao;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 public class Program {
     public static void main(String[] args) {
-        SellerDao sellerDao = DaoFactory.createSellerDaoJBDC();
+        SellerDao sellerDao = DaoFactory.createSellerDaoJDBC();
 
-        System.out.println("=== TEST 1: seller findById ====");
+        System.out.println("==== TESTE 1: FindById =====");
         Seller seller = sellerDao.findById(3);
         System.out.println(seller);
 
-        System.out.println();
-        System.out.println("=== TEST 2: seller findByDepartment ====");
-        Department department = new Department(2,null);
-        List<Seller> list = sellerDao.findByDepartment(department);
+        System.out.println("\n==== TESTE 2: FindByDepartment =====");
+        Department dep = new Department(2,null);
+        List<Seller> list = sellerDao.findByDepartment(dep);
         for(Seller obj : list) {
             System.out.println(obj);
         }
 
-        System.out.println();
-        System.out.println("=== TEST 3: seller findAll ====");
+        System.out.println("\n==== TESTE 3: FindAll =====");
         list = sellerDao.findAll();
         for(Seller obj : list) {
             System.out.println(obj);
         }
 
-        System.out.println();
-        System.out.println("=== TEST 4: seller insert ====");
-        department = new Department(1,"Cantor");
-        seller = new Seller(1,"Alexandre Pires","SPC@gmail.com",new Date(),3000.0,department);
-        sellerDao.insert(seller);
+//        System.out.println("\n==== TESTE 4: Insert =====");
+//        Seller newSeller = new Seller(null,"Michael Jackson","mick@gmail",new Date(),1234.0,dep);
+//        sellerDao.insert(newSeller);
+//        System.out.println("INSERIDO COM SUCESSO");
+//
+//        System.out.println("\n==== TESTE 5: Update =====");
+//        newSeller = sellerDao.findById(28);
+//        newSeller.setName("Mick Jagger");
+//        sellerDao.update(newSeller);
+//        System.out.println("UPDATE COMPLETED");
+
+        System.out.println("\n==== TESTE 6: Delete =====");
+        sellerDao.deleteById(28);
+        System.out.println("Deleted");
     }
 }
