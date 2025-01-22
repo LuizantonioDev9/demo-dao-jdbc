@@ -1,7 +1,5 @@
 package model.dao;
 
-
-
 import entities.Department;
 
 import java.util.List;

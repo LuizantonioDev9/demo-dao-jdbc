@@ -33,14 +33,17 @@ public class DepartmentDaoJDBC implements DepartmentDao {
                     int id = rs.getInt(1);
                     dep.setId(id);
                 }
+                else {
+                    throw new DbException("No rows affected");
+                }
             }
         }
         catch (SQLException e) {
             throw new DbException(e.getMessage());
         }
         finally {
-            DB.closeStatement(st);
             DB.closeResultSet(rs);
+            DB.closeStatement(st);
         }
     }
 
@@ -50,14 +53,20 @@ public class DepartmentDaoJDBC implements DepartmentDao {
         ResultSet rs = null;
 
         try {
-            st = conn.prepareStatement("update department set Name = ? where id = ?");
+            st = conn.prepareStatement("Update department set Name = ? where Id = ?", Statement.RETURN_GENERATED_KEYS);
             st.setString(1,dep.getName());
             st.setInt(2,dep.getId());
 
-            st.executeUpdate();
+            int rowsAffected = st.executeUpdate();
+
+
         }
         catch (SQLException e) {
             throw new DbException(e.getMessage());
+        }
+        finally {
+            DB.closeResultSet(rs);
+            DB.closeStatement(st);
         }
     }
 
@@ -67,13 +76,19 @@ public class DepartmentDaoJDBC implements DepartmentDao {
         ResultSet rs = null;
 
         try {
-            st = conn.prepareStatement("delete from department where id = ?");
+            st = conn.prepareStatement("Delete from department where id = ?");
             st.setInt(1,id);
 
-            st.executeUpdate();
+            int rowsAffected = st.executeUpdate();
+
+
         }
         catch (SQLException e) {
             throw new DbException(e.getMessage());
+        }
+        finally {
+            DB.closeResultSet(rs);
+            DB.closeStatement(st);
         }
     }
 
@@ -83,13 +98,13 @@ public class DepartmentDaoJDBC implements DepartmentDao {
         ResultSet rs = null;
 
         try {
-            st = conn.prepareStatement("select * from department where id = ?");
+            st = conn.prepareStatement("select * from department where id = ? order by name");
             st.setInt(1,id);
 
             rs = st.executeQuery();
 
             if(rs.next()) {
-                Department dep = instantionDepartment(rs);
+                Department dep = instatiationDepartment(rs);
                 return dep;
             }
             return null;
@@ -109,12 +124,12 @@ public class DepartmentDaoJDBC implements DepartmentDao {
         ResultSet rs = null;
 
         try {
-            st = conn.prepareStatement("select * from department order by Name ");
-            List<Department> list = new ArrayList<>();
+            st = conn.prepareStatement("select * from department order by name");
             rs = st.executeQuery();
+            List<Department> list = new ArrayList<>();
 
             while(rs.next()) {
-                Department dep = instantionDepartment(rs);
+                Department dep = instatiationDepartment(rs);
                 list.add(dep);
             }
             return list;
@@ -122,12 +137,16 @@ public class DepartmentDaoJDBC implements DepartmentDao {
         catch (SQLException e) {
             throw new DbException(e.getMessage());
         }
+        finally {
+            DB.closeResultSet(rs);
+            DB.closeStatement(st);
+        }
     }
 
-    public Department instantionDepartment(ResultSet rs) throws SQLException {
-        Department department = new Department();
-        department.setId(rs.getInt("Id"));
-        department.setName(rs.getString("Name"));
-        return department;
+    public Department instatiationDepartment(ResultSet rs) throws SQLException {
+        Department dep = new Department();
+        dep.setId(rs.getInt("Id"));
+        dep.setName(rs.getString("Name"));
+        return dep;
     }
 }
